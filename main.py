@@ -2,6 +2,9 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 
+print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+
 #intializing tensros
 x = tf.constant(4, shape=(1,1), dtype=tf.float32)
 x = tf.constant([[1,2,3],[4,5,6]])
