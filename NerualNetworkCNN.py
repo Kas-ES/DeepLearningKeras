@@ -10,6 +10,10 @@ from tensorflow.keras import layers, regularizers
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+from tensorflow.python.client import device_lib
+
+print(device_lib.list_local_devices())
+
 physical_devices = tf.config.list_physical_devices("GPU")
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
@@ -20,13 +24,52 @@ x_train = x_train / 255.0
 x_test = x_test / 255.0
 
 
-# A MODEL WITH MORE CONV LAYERS AND DENSE LAYERS, AND COPY THAT AND TRY ELU ACTIVATION
-
-
-def modelMORECONVDENSE():
+def modelElu():
     inputs = keras.Input(shape=(32, 32, 3))
 
-    #FIRST
+    # FIRST
+    x = layers.Conv2D(32, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(inputs)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.elu(x)
+    x = layers.Conv2D(32, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.elu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.10)(x)
+
+    # SECOND
+    x = layers.Conv2D(64, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.elu(x)
+    x = layers.Conv2D(64, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.elu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.25)(x)
+
+    # THIRD
+    x = layers.Conv2D(128, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.elu(x)
+    x = layers.Conv2D(128, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.elu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.35)(x)
+
+    x = layers.Flatten()(x)
+    x = layers.Dense(64, activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.Dense(64, activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.Dropout(0.50)(x)
+    outputs = layers.Dense(10)(x)
+    model = keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
+
+def model6blockVGGstyle():
+    inputs = keras.Input(shape=(32, 32, 3))
+
+    # FIRST
     x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(inputs)
     x = layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
@@ -34,9 +77,9 @@ def modelMORECONVDENSE():
     x = layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
     x = layers.MaxPooling2D()(x)
-    #x = layers.Dropout(0.25)(x)
+    x = layers.Dropout(0.05)(x)
 
-    #SECOND
+    # SECOND
     x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
     x = layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
@@ -44,9 +87,9 @@ def modelMORECONVDENSE():
     x = layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
     x = layers.MaxPooling2D()(x)
-    #x = layers.Dropout(0.25)(x)
+    x = layers.Dropout(0.1)(x)
 
-    #THIRD
+    # THIRD
     x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
     x = layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
@@ -54,7 +97,69 @@ def modelMORECONVDENSE():
     x = layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
     x = layers.MaxPooling2D()(x)
-    #x = layers.Dropout(0.25)(x)
+    x = layers.Dropout(0.15)(x)
+
+    # FOUR
+    x = layers.Conv2D(256, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.Conv2D(256, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.20)(x)
+
+    # FIVE
+    x = layers.Conv2D(512, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.Conv2D(512, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.25)(x)
+
+    x = layers.Flatten()(x)
+    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.Dropout(0.50)(x)
+    outputs = layers.Dense(10)(x)
+    model = keras.Model(inputs=inputs, outputs=outputs)
+    return model
+
+
+def model3blockVGGstyle():
+    inputs = keras.Input(shape=(32, 32, 3))
+
+    # FIRST
+    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(inputs)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.10)(x)
+
+    # SECOND
+    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.25)(x)
+
+    # THIRD
+    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
+    x = layers.BatchNormalization()(x)
+    x = keras.activations.relu(x)
+    x = layers.MaxPooling2D()(x)
+    x = layers.Dropout(0.35)(x)
 
     x = layers.Flatten()(x)
     x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
@@ -105,48 +210,57 @@ def Simple_model():
     model = keras.Model(inputs=inputs, outputs=outputs)
     return model
 
-def resNet50():
-    model = keras.Sequential()
-    model.add(keras.applications.ResNet50(include_top=False, weights='imagenet', input_shape=(32,32,3)))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(10, activation='softmax'))
-    model.layers[0].trainable=False
-    return model
-
-
-model = resNet50()
-
-print(model.summary())
 
 def dataAugmentConf():
     datagen = ImageDataGenerator(
         rotation_range=15,
         horizontal_flip=True,
         width_shift_range=0.1,
-        height_shift_range=0.1,
-        # brightness_range=(0.2, 0.8)
+        height_shift_range=0.1
     )
     return datagen
 
 
 # Create datagenerator
-#datagen = dataAugmentConf()
-#datagen.fit(x_train)
-#y_train = tf.reshape(y_train, (-1))
-#y_train = tf.cast(y_train, tf.float32)
-#x_train = tf.cast(x_train, tf.float32)
+datagen = dataAugmentConf()
+datagen.fit(x_train)
+# For some reason the dimesion of the lable training needs to set to 1 dimension.It seems like it expects label to be as
+# such but not the training lables.
+y_train = tf.reshape(y_train, (-1))
+# y_test = tf.reshape(y_test, (-1))
+y_train = tf.cast(y_train, tf.float32)
+x_train = tf.cast(x_train, tf.float32)
+
+base_model = keras.applications.VGG16(include_top=False, weights='imagenet', input_shape=(32,32,3))
+
+# New model on top
+inputs = keras.Input(shape=(32, 32, 3))
+x = base_model(inputs, training=True)
+x = keras.layers.GlobalAveragePooling2D()(x)
+x = tf.keras.layers.Dropout(0.2)(x)
+outputs = keras.layers.Dense(10)(x)
+model = keras.Model(inputs, outputs)
+
+#model = modelElu()
+
+# print(base_model.summary())
+print(model.summary())
+
+# model = modelElu()
+# print(model.summary())
 
 model.compile(
-    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     optimizer=keras.optimizers.Adam(learning_rate=3e-4),
     metrics=["accuracy"],
 )
-# 0.3e-4
-# 3e-4
 
-#history = model.fit(datagen.flow(x_train, y_train, batch_size=64), epochs=10, verbose=2,validation_data=(x_test, y_test))
-history = model.fit(x_train, y_train, batch_size=64, epochs=10, verbose=2, validation_data=(x_test, y_test))
+history = model.fit(datagen.flow(x_train, y_train, batch_size=64), epochs=10, verbose=2,
+                    validation_data=(x_test, y_test))
+# history = model.fit(x_train, y_train, batch_size=64, epochs=10, verbose=2, validation_data=(x_test, y_test))
 model.evaluate(x_test, y_test, batch_size=64, verbose=2)
+
+# model.save('finalModel_ELU')
 
 # list all data in history
 print(history.history.keys())
