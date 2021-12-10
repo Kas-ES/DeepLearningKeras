@@ -1,282 +1,292 @@
 import os
+from random import randrange
 
+import numpy as np
 from matplotlib import pyplot as plt
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers, regularizers
+import tensorflow.keras
+from keras.models import Model
 from tensorflow.keras.datasets import cifar10
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 from tensorflow.python.client import device_lib
 
 print(device_lib.list_local_devices())
-
 physical_devices = tf.config.list_physical_devices("GPU")
+
+#Load data
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
-# convert from int to float and normalize the pixel range to 0-1 by dividing by 255
-x_train = tf.cast(x_train, "float32")
-x_test = tf.cast(x_test, "float32")
-x_train = x_train / 255.0
-x_test = x_test / 255.0
+#Hot-encode lables
+y_train = keras.utils.to_categorical(y_train, 10)
+y_test = keras.utils.to_categorical(y_test, 10)
 
+#Reshape, normalize data and cast as float32
+x_train = x_train.reshape(50000, 32, 32, 3).astype("float32") / 255
+x_test = x_test.reshape(10000, 32, 32 ,3).astype("float32") / 255
 
-def modelElu():
-    inputs = keras.Input(shape=(32, 32, 3))
+y_train = y_train.astype("float32")
+y_test = y_test.astype("float32")
 
-    # FIRST
-    x = layers.Conv2D(32, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(inputs)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.elu(x)
-    x = layers.Conv2D(32, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.elu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.10)(x)
+#Take 10% drom trianing data to validaiton data
+x_val = x_train[-5000:]
+y_val = y_train[-5000:]
+x_train = x_train[:-5000]
+y_train = y_train[:-5000]
 
-    # SECOND
-    x = layers.Conv2D(64, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.elu(x)
-    x = layers.Conv2D(64, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.elu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.25)(x)
+#Take the mean with the std
+mean = np.mean(x_train)
+std = np.std(x_train)
+x_test = (x_test - mean) / std
+x_train = (x_train - mean) / std
 
-    # THIRD
-    x = layers.Conv2D(128, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.elu(x)
-    x = layers.Conv2D(128, 3, padding="same", activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.elu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.35)(x)
+#Model modifications.
+input_image_shape = 32, 32, 3
+inputs = keras.Input(shape=input_image_shape)
+filters = 32
+hidden_layer_nodes = 64
+classes = 10
 
-    x = layers.Flatten()(x)
-    x = layers.Dense(64, activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dense(64, activation="elu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dropout(0.50)(x)
-    outputs = layers.Dense(10)(x)
-    model = keras.Model(inputs=inputs, outputs=outputs)
-    return model
-
-
+#<--MODELS###
 def model6blockVGGstyle():
-    inputs = keras.Input(shape=(32, 32, 3))
-
     # FIRST
-    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(inputs)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Conv2D(filters, 3, padding="same", activation="relu")(inputs)
+    x = tensorflow.keras.layers.Conv2D(filters, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.05)(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
     # SECOND
-    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 2, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 2, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.1)(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
     # THIRD
-    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 4, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 4, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.15)(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
-    # FOUR
-    x = layers.Conv2D(256, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.Conv2D(256, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.20)(x)
+    # FOURTH
+    x = tensorflow.keras.layers.Conv2D(filters * 8, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 8, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
-    # FIVE
-    x = layers.Conv2D(512, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.Conv2D(512, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.25)(x)
+    # FIFTH
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
-    x = layers.Flatten()(x)
-    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dropout(0.50)(x)
-    outputs = layers.Dense(10)(x)
+    x = tensorflow.keras.layers.Flatten()(x)
+    #x = layers.Dense(hidden_layer_nodes * 256, activation="relu")(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes * 16, activation="relu")(x)
+    x = tensorflow.keras.layers.Dropout(0.5)(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes, activation="relu")(x)
+    x = tensorflow.keras.layers.Dropout(0.5)(x)
+    outputs = tensorflow.keras.layers.Dense(classes)(x)
     model = keras.Model(inputs=inputs, outputs=outputs)
     return model
 
 
 def model3blockVGGstyle():
-    inputs = keras.Input(shape=(32, 32, 3))
-
     # FIRST
-    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(inputs)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Conv2D(filters, 3, padding="same", activation="relu")(inputs)
+    x = tensorflow.keras.layers.Conv2D(filters, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.10)(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
     # SECOND
-    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.25)(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 2, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 2, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
     # THIRD
-    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Dropout(0.35)(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 4, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 4, 3, padding="same", activation="relu")(x)
+    #x = layers.Conv2D(filters * 4, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
 
-    x = layers.Flatten()(x)
-    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dropout(0.50)(x)
-    outputs = layers.Dense(10)(x)
+    x = tensorflow.keras.layers.Flatten()(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes * 16, activation="relu")(x)
+    x = tensorflow.keras.layers.Dropout(0.5)(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes, activation="relu")(x)
+    x = tensorflow.keras.layers.Dropout(0.5)(x)
+    outputs = tensorflow.keras.layers.Dense(classes)(x)
     model = keras.Model(inputs=inputs, outputs=outputs)
     return model
 
-
 def model_Regularizer_DropOut():
-    inputs = keras.Input(shape=(32, 32, 3))
-    x = layers.Conv2D(32, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(inputs)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Conv2D(64, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Conv2D(128, 3, padding="same", activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.BatchNormalization()(x)
-    x = keras.activations.relu(x)
-    x = layers.Flatten()(x)
-    x = layers.Dense(64, activation="relu", kernel_regularizer=regularizers.l2(0.01))(x)
-    x = layers.Dropout(0.5)(x)
-    outputs = layers.Dense(10)(x)
+    x = tensorflow.keras.layers.Conv2D(filters, 3, padding="same", activation="relu", kernel_regularizer=tensorflow.keras.regularizers.l2(0.001))(inputs)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
+
+    x = tensorflow.keras.layers.Conv2D(filters * 2, 3, padding="same", activation="relu", kernel_regularizer=tensorflow.keras.regularizers.l2(0.001))(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 4, 3, padding="same", activation="relu", kernel_regularizer=tensorflow.keras.regularizers.l2(0.001))(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+
+    x = tensorflow.keras.layers.Flatten()(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes, activation="relu", kernel_regularizer=tensorflow.keras.regularizers.l2(0.001))(x)
+    x = tensorflow.keras.layers.Dropout(0.5)(x)
+    outputs = tensorflow.keras.layers.Dense(classes)(x)
     model = keras.Model(inputs=inputs, outputs=outputs)
     return model
 
 
 def Simple_model():
-    inputs = keras.Input(shape=(32, 32, 3))
-    x = layers.Conv2D(32, 3, padding="same", activation="relu")(inputs)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.Conv2D(filters, 3, padding="same", activation="relu")(inputs)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 2, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.MaxPooling2D()(x)
-    x = layers.Conv2D(128, 3, padding="same", activation="relu")(x)
-    x = layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 4, 3, padding="same", activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
     x = keras.activations.relu(x)
-    x = layers.Flatten()(x)
-    x = layers.Dense(64, activation="relu")(x)
-    outputs = layers.Dense(10)(x)
+    x = tensorflow.keras.layers.Flatten()(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes, activation="relu")(x)
+    outputs = tensorflow.keras.layers.Dense(classes)(x)
     model = keras.Model(inputs=inputs, outputs=outputs)
     return model
 
 
-def dataAugmentConf():
-    datagen = ImageDataGenerator(
-        rotation_range=15,
-        horizontal_flip=True,
-        width_shift_range=0.1,
-        height_shift_range=0.1
-    )
-    return datagen
+def pretrainedPureVGG16():
+    base_model = keras.applications.VGG16(include_top=False, weights='imagenet', input_shape=(32, 32, 3))
+    print(base_model.summary())
+    x = base_model(inputs, training=True)
+
+    x = tf.keras.layers.Dropout(0.5)(x)
+    x = tensorflow.keras.layers.Flatten()(x)
+
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes * 256, activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.7)(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes * 16, activation="relu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.5)(x)
+
+    outputs = keras.layers.Dense(classes)(x)
+    model = keras.Model(inputs, outputs)
+    return model
+
+
+def pretrainedVGG16toplayers():
+    base_model = keras.applications.VGG16(include_top=False, weights='imagenet', input_shape=(32, 32, 3))
+
+    model12 = Model(inputs=base_model.input, outputs=base_model.layers[-9].output)
+    print(model12.summary())
+    x = model12(inputs, training=True)
+
+    #x = tf.keras.layers.Dropout(0.3)(x)
+
+    x = tensorflow.keras.layers.Conv2D(filters * 8, 3, padding="same", activation="elu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 8, 3, padding="same", activation="elu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
+    #x = tf.keras.layers.Dropout(0.4)(x)
+
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="elu")(x)
+    x = tensorflow.keras.layers.Conv2D(filters * 16, 3, padding="same", activation="elu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tensorflow.keras.layers.MaxPooling2D()(x)
+    #x = tf.keras.layers.Dropout(0.5)(x)
+
+    x = tensorflow.keras.layers.Flatten()(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes * 256, activation="elu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.9)(x)
+    x = tensorflow.keras.layers.Dense(hidden_layer_nodes, activation="elu")(x)
+    x = tensorflow.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.5)(x)
+
+    outputs = keras.layers.Dense(classes)(x)
+    model = keras.Model(inputs, outputs)
+    return model
+
+
+def pretrainedResnet50():
+    base_model = keras.applications.resnet50.ResNet50(include_top=False, weights='imagenet', input_shape=(32, 32, 3))
+    print(base_model.summary())
+    x = base_model(inputs, training=True)
+    x = keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.Dropout(0.2)(x)
+    outputs = keras.layers.Dense(classes)(x)
+    model = keras.Model(inputs, outputs)
+    return model
+###MODELS###--->
 
 
 # Create datagenerator
+def dataAugmentConf():
+    datagen = ImageDataGenerator(
+        rotation_range=15,
+        zoom_range=0.8,
+        horizontal_flip=True,
+        validation_split=0.1,
+        width_shift_range=0.2,
+        height_shift_range=0.2
+    )
+    return datagen
+
 datagen = dataAugmentConf()
-datagen.fit(x_train)
-# For some reason the dimesion of the lable training needs to set to 1 dimension.It seems like it expects label to be as
-# such but not the training lables.
-y_train = tf.reshape(y_train, (-1))
-# y_test = tf.reshape(y_test, (-1))
-y_train = tf.cast(y_train, tf.float32)
-x_train = tf.cast(x_train, tf.float32)
+#fit for training data
+#datagen.fit(x_train)
 
-base_model = keras.applications.VGG16(include_top=False, weights='imagenet', input_shape=(32,32,3))
-
-# New model on top
-inputs = keras.Input(shape=(32, 32, 3))
-x = base_model(inputs, training=True)
-x = keras.layers.GlobalAveragePooling2D()(x)
-x = tf.keras.layers.Dropout(0.2)(x)
-outputs = keras.layers.Dense(10)(x)
-model = keras.Model(inputs, outputs)
-
-#model = modelElu()
-
-# print(base_model.summary())
+#Create model
+model = pretrainedVGG16toplayers()
 print(model.summary())
 
-# model = modelElu()
-# print(model.summary())
-
+#Compile loss, optimizer and metric
 model.compile(
-    loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    optimizer=keras.optimizers.Adam(learning_rate=3e-4),
-    metrics=["accuracy"],
+    loss=keras.losses.CategoricalCrossentropy(from_logits=True),
+    optimizer=keras.optimizers.Adam(learning_rate=3e-4, clipnorm=1),
+    metrics=["categorical_accuracy"],
 )
 
-history = model.fit(datagen.flow(x_train, y_train, batch_size=64), epochs=10, verbose=2,
-                    validation_data=(x_test, y_test))
-# history = model.fit(x_train, y_train, batch_size=64, epochs=10, verbose=2, validation_data=(x_test, y_test))
-model.evaluate(x_test, y_test, batch_size=64, verbose=2)
+#Train the model
+#history = model.fit(datagen.flow(x_train, y_train, batch_size=64, subset='training'), validation_data=datagen.flow(x_train, y_train, batch_size=8, subset='validation'), epochs=100, verbose=2)
+#history = model.fit(datagen.flow(x_train, y_train, batch_size=64), validation_data=(x_val, y_val), epochs=100, verbose=2)
+history = model.fit(x_train, y_train, batch_size=64, epochs=10, verbose=2, validation_data=(x_val, y_val))
 
-# model.save('finalModel_ELU')
+#Evaluate on test
+model.evaluate(x_test, y_test, batch_size=64, verbose=2)
 
 # list all data in history
 print(history.history.keys())
 # summarize history for accuracy
-plt.plot(history.history['accuracy'])
-plt.plot(history.history['val_accuracy'])
+
+plt.plot(history.history['categorical_accuracy'])
+plt.plot(history.history['val_categorical_accuracy'])
 plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train', 'valid'], loc='upper left')
 plt.show()
+
 # summarize history for loss
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
 plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train', 'valid'], loc='upper left')
 plt.show()
